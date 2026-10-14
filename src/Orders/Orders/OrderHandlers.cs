@@ -23,6 +23,7 @@ internal static class OrderHandlers
             order.Items,
             totals.Subtotal,
             totals.BulkDiscount,
+            totals.CodeDiscount,
             totals.Shipping,
             totals.Total,
         };
@@ -66,6 +67,36 @@ internal static class OrderHandlers
 
     private static Response ShowOrder(int id) =>
         FindOrder(id) is { } order ? new Response(200, Present(order)) : NotFound("order");
+
+    /* POST /orders/:id/discount  { code } – applies a discount code, replacing any previous one */
+    public static Response ApplyDiscountCode(Request req, int id)
+    {
+        var customer = CurrentCustomer(req);
+        if (customer == null) return new Response(401, new { error = "sign in first" });
+        var order = FindOrder(id);
+        if (order == null || order.CustomerId != customer.Id) return NotFound("order");
+        if (order.Status != "open") return new Response(409, new { error = $"the order is already {order.Status}" });
+
+        var typed = ReadCode(req.Body);
+        if (string.IsNullOrEmpty(typed)) return BadRequest("code is required");
+        var code = FindDiscountCode(typed);
+        if (code == null) return BadRequest("unknown discount code");
+
+        var today = Today();
+        var totals = PriceOrder(order, null, today);
+        var refusal = WhyCodeDoesNotApply(code, totals.Subtotal - totals.BulkDiscount, today);
+        if (refusal != null) return BadRequest(refusal);
+
+        SetDiscountCode(order.Id, code.Code);
+        return ShowOrder(id);
+    }
+
+    /* The code of a { code } request body, or null unless it is a string. */
+    private static string? ReadCode(JsonElement body)
+    {
+        if (body.ValueKind != JsonValueKind.Object) return null;
+        return body.TryGetProperty("code", out var c) && c.ValueKind == JsonValueKind.String ? c.GetString() : null;
+    }
 
     /* DELETE /orders/:id/items/:sku */
     public static Response RemoveItemFromOrder(Request req, int id, string sku)

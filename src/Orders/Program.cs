@@ -13,6 +13,8 @@ app.MapGet("/orders/{id:int}", async (HttpRequest incoming, int id) =>
     Send(OrderHandlers.GetOrder(await ReadRequest(incoming), id)));
 app.MapPost("/orders/{id:int}/items", async (HttpRequest incoming, int id) =>
     Send(OrderHandlers.AddItemToOrder(await ReadRequest(incoming), id)));
+app.MapPost("/orders/{id:int}/discount", async (HttpRequest incoming, int id) =>
+    Send(OrderHandlers.ApplyDiscountCode(await ReadRequest(incoming), id)));
 app.MapDelete("/orders/{id:int}/items/{sku}", async (HttpRequest incoming, int id, string sku) =>
     Send(OrderHandlers.RemoveItemFromOrder(await ReadRequest(incoming), id, sku)));
 app.MapGet("/orders/{id:int}/receipt", async (HttpRequest incoming, int id) =>
