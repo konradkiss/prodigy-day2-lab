@@ -22,8 +22,13 @@ npm ci
 npm run doctor
 ```
 
-`doctor` prints one line per check and ends with "All green. You are ready." If something is red, tell us before
-the session.
+`doctor` prints one line per check and ends with "All green. You are ready." It also downloads the referee from
+agentcode.page and tries it, so a blocked site or a proxy shows up now. If something is red, tell us before the
+session.
+
+**Command approvals.** Claude Code asks before it runs a command such as `dotnet test`, `dotnet build` or
+`npm run check`. When it asks, choose "Yes, and don't ask again": it then runs that command in this project without
+asking, and the exercises go faster.
 
 The build warns that `System.Linq.Dynamic.Core` 1.5.1 has a known vulnerability. That is expected: the vulnerable
 package is one of the planted problems. Don't update it by hand; the session builds on it.
@@ -34,12 +39,13 @@ package is one of the planted problems. Don't update it by hand; the session bui
 |---|---|
 | `npm run stages` | lists the stages of the session and marks where you are |
 | `npm run stage -- <name>` | switches to a stage (e.g. `npm run stage -- 4-guarded`); your current work is committed first, nothing is lost |
-| `npm run referee` | scores the service with the referee: 23 black-box checks over HTTP |
+| `npm run referee` | starts the service on a port of its own, scores it with the referee (23 black-box checks over HTTP), and stops it again |
 | `npm run mutate` | a colleague's one-character change at the free-shipping threshold; then `dotnet test`: do the tests notice? |
 | `npm run restore` | undoes the mutation |
 | `npm run stryker` | mutation testing with Stryker.NET: hundreds of such small changes, and which ones the tests notice |
-| `npm run lock-rules` | after the rules exercise: the hooks protect `rules/`, `rule-tests/` and `sgconfig.yml`, so the agent can't loosen a rule |
-| `npm run doctor` | is this laptop ready? |
+| `npm run wire-rules` | after the rules exercise: adds the rule tests and the scan to `scripts/check.mjs` (the agent can't edit it), then locks the rules |
+| `npm run lock-rules` | locks the rules only: the hooks protect `rules/`, `rule-tests/` and `sgconfig.yml`, so the agent can't loosen a rule |
+| `npm run doctor` | is this laptop ready? (also downloads and tries the referee) |
 | `dotnet test`, `npm start` | the unit tests; the service on http://localhost:3000 |
 
 Every stage prints its own short note (`docs/STAGE.md`) when you switch to it: what is new, which exercise runs
