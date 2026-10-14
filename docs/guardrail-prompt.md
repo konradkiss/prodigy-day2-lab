@@ -1,6 +1,6 @@
 # The guardrail prompt
 
-The prompt behind this stage, verbatim. This is what the agent ran on top of 3-guidance to produce
+The prompt behind this stage. One line is reworded since the run, which read “Silence nothing; if you think a finding is wrong, say so instead.” This is what the agent ran on top of 3-guidance to produce
 Directory.Build.props, .editorconfig, CodeMetricsConfig.txt, the secret scan, scripts/check.mjs and the four Claude
 Code hooks. After the session you can try it on a repository of your own.
 
@@ -26,5 +26,5 @@ Claude Code hooks in .claude/settings.json, each a Node script under scripts/hoo
 
 Test each hook once with a hand-written JSON input before you rely on it.
 
-Then run the full check and fix everything it finds in the existing code. Silence nothing; if you think a finding is wrong, say so instead. At the end, list briefly what the checks found and what you changed.
+Then run the full check and fix everything it finds in the existing code. Fix the cause of every finding; if you think a finding is wrong, stop and say why. At the end, list briefly what the checks found and what you changed.
 ```
