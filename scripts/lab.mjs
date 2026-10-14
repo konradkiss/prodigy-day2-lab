@@ -18,7 +18,7 @@ import { ensureReferee, HOW_TO_FREE_3000, portInUse, REFEREE, startService, stop
 const STAGES = [
   ['0-start', 'the untouched lab, the ticket, the doctor'],
   ['1-bare', 'the agent did the ticket with no guardrails (read the diff: what is wrong?)'],
-  ['3-guidance', 'a CLAUDE.md: what done means, scope, ask do not guess'],
+  ['3-guidance', 'a CLAUDE.md: what done means, scope, when to ask'],
   ['4-guarded', 'check script, hooks, strict build, analyzers, audit, secret scan (run the ticket here)'],
   ['4-guarded-ticket', 'the ticket done under the hooks (write your rules here)'],
   ['4-rules', 'ast-grep rules with their own tests, wired into the check'],

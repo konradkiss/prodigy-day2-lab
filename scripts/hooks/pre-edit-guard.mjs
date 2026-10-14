@@ -16,7 +16,7 @@ if (rel === null) process.exit(0);
 
 const reason = protectedReason(rel);
 if (reason) {
-  block(`Refused: ${reason}. The checks' configuration, scripts/ and .claude/ are not edited by the agent. `
+  block(`Refused: ${reason}. The checks' configuration, scripts/, .claude/ and .codex/ are not edited by the agent. `
     + 'Fix the code the check complains about; if you think a check is wrong, stop and tell the human why.');
 }
 
