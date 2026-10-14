@@ -12,5 +12,6 @@ The referee gives 21 of 23. The two open items are the ones no general check can
 of the receipt. (In the TypeScript lab the warehouse SQL was open here too; in C# the .NET analyzers' CA2100 caught
 it on 4-guarded.)
 
-Exercises here: "A sentence becomes a check" (start your agent, paste the rules prompt; the agent will hand you lines
-for scripts/check.mjs, you add them). Then `npm run lock-rules`. Next: `npm run stage -- 4-rules`.
+Exercises here: "A sentence becomes a check" (start your agent, paste the rules prompt). The agent can't edit
+scripts/check.mjs, the hooks protect it, so it will tell you what to add: you run `npm run wire-rules`, which adds the
+rule tests and the scan to the check and locks the rules. Then `npm run check`. Next: `npm run stage -- 4-rules`.
