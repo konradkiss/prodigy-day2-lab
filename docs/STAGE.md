@@ -1,8 +1,10 @@
-# Stage 0-start
+# Stage 1-bare
 
-The untouched order service: customers, orders, a bulk discount, shipping, an in-memory database.
-The open ticket is docs/TICKET-142.md. Nothing checks the agent's work yet.
+The agent implemented TICKET-142 with no guardrails at all: no CLAUDE.md, no checks, no hooks.
+The ticket's ten points are correct, and it wrote 14 new tests (25 in all). It left everything else as it was.
+Ask your agent to review the change (the prompt is on the slide) and compare its list with the referee.
 
-Exercises here: "Is your doctor green?" (`npm run doctor`), "The ticket", "Find the ambiguities, write Gherkin"
-(start your agent in the repo, paste the prompt).
-Next: `npm run stage -- 1-bare` to read what the agent did with no guardrails.
+Exercises here: "Find what's wrong" (your agent reviews, `npm run referee` scores), "Testing the tests"
+(`npm run mutate`, `dotnet test`, `npm run restore`; then `npm run stryker` for all such changes at once),
+"Run the reviewer" (start your agent in the repo, paste the review prompt).
+Score it: `npm run referee` (18 of 23). Next: `npm run stage -- 3-guidance`.
