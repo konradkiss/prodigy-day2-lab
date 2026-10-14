@@ -2,6 +2,7 @@ using System.Linq.Dynamic.Core;
 using System.Text.Json;
 using static Orders.Auth;
 using static Orders.Http;
+using static Orders.Orders.DiscountCodes;
 using static Orders.Orders.OrderRepository;
 using static Orders.Orders.Pricing;
 using static Orders.Orders.Receipts;
@@ -15,7 +16,7 @@ public static class OrderHandlers
 
     public static object Present(Order order)
     {
-        var totals = PriceOrder(order);
+        var totals = PriceOrder(order, FindDiscountCode(order.DiscountCode));
         return new
         {
             order.Id,
@@ -24,6 +25,7 @@ public static class OrderHandlers
             order.Items,
             totals.Subtotal,
             totals.BulkDiscount,
+            totals.CodeDiscount,
             totals.Shipping,
             totals.Total,
         };
@@ -72,6 +74,33 @@ public static class OrderHandlers
         if (order.Status != "open") return new Response(409, new { error = $"the order is already {order.Status}" });
 
         RemoveItem(order.Id, sku);
+        return new Response(200, Present(FindOrder(id)));
+    }
+
+    /* POST /orders/:id/discount  { code } – applies a discount code, replacing any earlier one */
+    public static Response ApplyDiscountCode(Request req, int id)
+    {
+        var customer = CurrentCustomer(req);
+        if (customer == null) return new Response(401, new { error = "sign in first" });
+        var order = FindOrder(id);
+        if (order == null || order.CustomerId != customer.Id) return NotFound("order");
+        if (order.Status != "open") return new Response(409, new { error = $"the order is already {order.Status}" });
+
+        var body = req.Body;
+        JsonElement code = default;
+        if (body.ValueKind == JsonValueKind.Object) body.TryGetProperty("code", out code);
+        if (code.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(code.GetString())) return BadRequest("code is required");
+
+        var discount = FindDiscountCode(code.GetString());
+        if (discount == null) return BadRequest("unknown discount code");
+        if (discount.IsExpiredOn(Today()))
+            return BadRequest($"the code {discount.Code} expired on {discount.ExpiresOn:yyyy-MM-dd}");
+        var totals = PriceOrder(order);
+        var goods = totals.Subtotal - totals.BulkDiscount;
+        if (!discount.QualifiesFor(goods))
+            return BadRequest($"the code {discount.Code} needs an order of at least {Money.FormatCents(discount.MinOrderCents)}");
+
+        SetDiscountCode(order.Id, discount.Code);
         return new Response(200, Present(FindOrder(id)));
     }
 
