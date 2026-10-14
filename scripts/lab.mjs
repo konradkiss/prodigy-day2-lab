@@ -46,12 +46,19 @@ function resolveRef(name) {
   return candidates.find((ref) => git('rev-parse', '--verify', '--quiet', ref).status === 0) ?? null;
 }
 
-/* Uncommitted work is committed on the current branch before switching, so nothing is lost. */
+/* Uncommitted work is committed on the current branch before switching, so nothing is lost. A machine with no git
+   name and email (git refuses the commit there) gets the commit under "lab"; if it still fails, nothing is switched. */
 function commitWorkInProgress(next) {
   if (!git('status', '--porcelain').stdout.trim()) return;
   const current = git('branch', '--show-current').stdout.trim() || 'detached';
   git('add', '-A');
-  git('commit', '-q', '--no-verify', '-m', `WIP on ${current} before switching to ${next}`);
+  const message = `WIP on ${current} before switching to ${next}`;
+  let done = git('commit', '-q', '--no-verify', '-m', message);
+  if (done.status !== 0) done = git('-c', 'user.name=lab', '-c', 'user.email=lab@localhost', 'commit', '-q', '--no-verify', '-m', message);
+  if (done.status !== 0) {
+    console.error(`could not commit your changes on ${current}, so nothing was switched:\n${(done.stderr || done.stdout).trim()}\nCommit or stash them yourself, then run this again.`);
+    process.exit(1);
+  }
   console.log(`your changes were committed on ${current}, nothing is lost (return with: npm run stage -- ${current.replace(/^stage\//, '')})`);
 }
 
@@ -206,9 +213,21 @@ function wireRules() {
  * hooks exist (from the 4-guarded stage on). The hooks read the extra protected paths from this file.
  */
 const LOCKED = 'scripts/hooks/locked-paths.json';
+const GUARDS = 'scripts/lib/guards.mjs';
+const SECRETLINT_LINE = "  ['secretlint-disable comment', /secretlint-disable/g],\n";
+
+/* An // ast-grep-ignore comment would switch a rule off for one line, so the hooks refuse it from now on, as on 4-rules. */
+function refuseIgnoreComments() {
+  if (!existsSync(GUARDS)) return;
+  const g = readFileSync(GUARDS, 'utf8');
+  if (g.includes('ast-grep-ignore') || !g.includes(SECRETLINT_LINE)) return;
+  writeFileSync(GUARDS, g.replace(SECRETLINT_LINE, `${SECRETLINT_LINE}  ['ast-grep-ignore comment', /ast-grep-ignore/g],\n`));
+  console.log(`the hooks now also refuse // ast-grep-ignore comments (${GUARDS})`);
+}
 
 function lockRules() {
   if (!existsSync('scripts/hooks')) { console.error('no hooks on this stage (scripts/hooks/); switch to 4-guarded or later'); process.exit(1); }
+  refuseIgnoreComments();
   const paths = ['rules/', 'rule-tests/', 'sgconfig.yml'];
   const now = existsSync(LOCKED) ? JSON.parse(readFileSync(LOCKED, 'utf8')) : [];
   const missing = paths.filter((p) => !now.includes(p));
