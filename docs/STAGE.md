@@ -8,9 +8,7 @@ The existing code was fixed where the checks complained. The ticket is NOT done 
 
 What the checks found in the existing code: the vulnerable System.Linq.Dynamic.Core (removed), the hard-coded staff
 token (now only from STAFF_TOKEN), SQL built from strings in two places (CA2100: now parameters), the two crashes
-(nullable warnings: now 401 and 404), one method over the complexity limit. They did not find the two missing
-owner checks (remove-item and the receipt): nothing generic knows whose order it is. The agent listed both as out
-of scope.
+(nullable warnings: now 401 and 404), one method over the complexity limit. What they could not find is the subject of the next exercises.
 
 Its own hooks went live during the run and refused its later edits to scripts/, so it handed three hook fixes to
 the human as a patch; they are the next commit. Codex hooks (.codex/hooks.json) were added by hand.
