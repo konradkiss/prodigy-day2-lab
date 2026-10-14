@@ -86,7 +86,7 @@ function stage(name) {
   if (existsSync('docs/STAGE.md')) console.log(`\n${readFileSync('docs/STAGE.md', 'utf8')}`);
 }
 
-/* The referee starts the service itself; building first keeps its start-up wait short. */
+/* The referee starts the service itself: build it first, then start the built program directly (no dotnet run), so it is up in a second. */
 async function referee() {
   mkdirSync('.lab', { recursive: true });
   if (!existsSync('.lab/referee.mjs')) {
@@ -95,9 +95,9 @@ async function referee() {
     writeFileSync('.lab/referee.mjs', await res.text());
     console.log('referee downloaded to .lab/referee.mjs');
   }
-  const build = quiet('dotnet', ['build', 'src/Orders', '-v', 'q', '-nologo']);
+  const build = quiet('dotnet', ['build', 'src/Orders', '-c', 'Debug', '-v', 'q', '-nologo']);
   if (build.status !== 0) { console.error(`the service does not build, so the referee cannot start it:\n${(build.stdout + build.stderr).trim()}`); process.exit(1); }
-  process.exit(run('node', ['.lab/referee.mjs', '--start', 'dotnet run --project src/Orders --no-build', ...process.argv.slice(3)]));
+  process.exit(run('node', ['.lab/referee.mjs', '--start', 'dotnet src/Orders/bin/Debug/net10.0/Orders.dll', ...process.argv.slice(3)]));
 }
 
 /* The one-character mutation of the testing exercise: >= becomes > at the free-shipping threshold. Run the tests yourself. */
