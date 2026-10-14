@@ -94,11 +94,14 @@ export const HOW_TO_FREE_3000 = WIN
   ? 'To free it: netstat -ano | findstr :3000, then taskkill /pid <the number in the last column> /T /F'
   : 'To free it: lsof -ti tcp:3000 | xargs kill';
 
-/* Stops the service and everything it started. */
+/* Stops the service and everything it started, and waits until it is gone (forcefully after five seconds). */
 export function stopService(child) {
-  if (child.exitCode !== null || child.signalCode !== null) return;
+  if (child.exitCode !== null || child.signalCode !== null) return Promise.resolve();
+  const gone = new Promise((resolve) => { child.once('exit', resolve); });
   if (WIN) spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
   else child.kill('SIGTERM');
+  const force = setTimeout(() => { if (!WIN) child.kill('SIGKILL'); }, 5_000);
+  return gone.finally(() => clearTimeout(force));
 }
 
 async function answers(base) {
@@ -126,6 +129,6 @@ export async function startService() {
     const gone = await Promise.race([exited.then(() => true), new Promise((r) => { setTimeout(() => r(false), 250); })]);
     if (gone) throw new Error(`the service stopped before it answered:\n${log.trim()}`);
   }
-  stopService(child);
+  await stopService(child);
   throw new Error(`the service did not answer within a minute:\n${log.trim()}`);
 }
