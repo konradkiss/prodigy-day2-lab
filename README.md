@@ -73,6 +73,9 @@ Pricing: ten or more of one product gives 5% off that line, five or more socks 1
 €50.00 of goods; a discount code takes its percentage off the goods after the bulk discount, and free shipping is
 decided after that. Every amount is a whole number of cents, rounded half up (`docs/money.md`).
 
+The staff token for the warehouse list is in the code at the start (one of the planted problems). From the
+`4-guarded` stage on it comes only from the `STAFF_TOKEN` environment variable; the referee sets it itself.
+
 ```bash
 npm start
 curl -H 'X-Customer-Id: 1' localhost:3000/orders/1002
