@@ -1,8 +1,7 @@
-# Stage 0-start
+# Stage 3-guidance
 
-The untouched order service: customers, orders, a bulk discount, shipping, an in-memory database.
-The open ticket is docs/TICKET-142.md. Nothing checks the agent's work yet.
+Same code as 0-start, plus a CLAUDE.md: what done means, what is out of scope, and ask-do-not-guess.
+AGENTS.md points Codex at the same file. Read the diff: it is short on purpose. Nothing here is enforced yet;
+`npm run check` and the hooks the CLAUDE.md mentions arrive on the next stage.
 
-Exercises here: "Is your doctor green?" (`npm run doctor`), "The ticket", "Find the ambiguities, write Gherkin"
-(start your agent in the repo, paste the prompt).
-Next: `npm run stage -- 1-bare` to read what the agent did with no guardrails.
+Exercises here: "The lab's CLAUDE.md" (read it). Next: `npm run stage -- 4-guarded`.
