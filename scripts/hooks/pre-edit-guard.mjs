@@ -9,7 +9,7 @@ import { join } from 'node:path';
 import { ROOT, addedSuppressions, protectedReason, repoPath } from '../lib/guards.mjs';
 import { block, readInput } from './hook-input.mjs';
 
-const input = readInput();
+const input = readInput({ strict: true });
 const tool = input.tool_input ?? {};
 const rel = tool.file_path ? repoPath(tool.file_path, input.cwd) : null;
 if (rel === null) process.exit(0);

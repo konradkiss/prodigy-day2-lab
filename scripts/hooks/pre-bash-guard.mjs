@@ -9,7 +9,7 @@ import { basename } from 'node:path';
 import { protectedNames, protectedPaths, protectedReason, repoPath } from '../lib/guards.mjs';
 import { block, readInput } from './hook-input.mjs';
 
-const input = readInput();
+const input = readInput({ strict: true });
 const command = String(input.tool_input?.command ?? '');
 if (!command.trim()) process.exit(0);
 
@@ -27,10 +27,12 @@ if (new RegExp(String.raw`\b(?:${CHECK_PROPERTIES})\s*=`, 'i').test(command) || 
 /* Commands that change the checks' tooling without naming a protected file. */
 const TOOLING = [
   /\bnpm\s+(?:pkg\s+(?:set|delete)|set-script)\b/i,
+  /\bnpm\s+(?:uninstall|remove|rm|un|r|update|up|upgrade|dedupe|prune|link)\b/i,
+  /\bnpm\s+(?:install|i|in|add)\b(?:\s+-\S+)*\s+[^-\s;&|]/i,
   /\bdotnet\s+tool\s+(?:install|uninstall|update)\b(?![^;&|\n]*\s(?:-g|--global)\b)/i,
   /\bdotnet\s+new\s+(?:editorconfig|globaljson|buildprops|buildtargets|tool-manifest)\b/i,
 ];
-if (TOOLING.some((re) => re.test(command))) block(`Refused: this command changes the checks' configuration (package.json scripts or the tool manifest). ${ADVICE}`);
+if (TOOLING.some((re) => re.test(command))) block(`Refused: this command changes the checks' configuration (package.json, its lock file or the tool manifest). ${ADVICE}`);
 
 const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const mentions = [...protectedPaths(), ...protectedNames()].map((p) => {

@@ -3,11 +3,23 @@
  *   - the protected paths: the checks' configuration, scripts/ and the agents' settings;
  *   - the suppressions: ways to switch a check off instead of fixing what it found.
  */
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
+/* A path with its symlinks resolved (macOS /tmp, a linked checkout), as far as it exists. */
+function real(path) {
+  const rest = [];
+  let p = path;
+  while (!existsSync(p)) {
+    if (dirname(p) === p) return path;
+    rest.unshift(basename(p));
+    p = dirname(p);
+  }
+  return join(realpathSync.native(p), ...rest);
+}
+
+export const ROOT = real(resolve(dirname(fileURLToPath(import.meta.url)), '..', '..'));
 
 /* Directories (trailing slash) and files, relative to the root. scripts/hooks/locked-paths.json adds more (npm run lock-rules). */
 const PROTECTED = [
@@ -29,7 +41,7 @@ export function protectedNames() {
 
 /* A path relative to the root with forward slashes, or null when it lies outside the repository. */
 export function repoPath(file, cwd = process.cwd()) {
-  const rel = relative(ROOT, isAbsolute(file) ? file : resolve(cwd, file)).replaceAll('\\', '/');
+  const rel = relative(ROOT, real(isAbsolute(file) ? file : resolve(cwd, file))).replaceAll('\\', '/');
   return rel.startsWith('../') || rel === '..' || isAbsolute(rel) ? null : rel;
 }
 
