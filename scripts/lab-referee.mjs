@@ -1,8 +1,6 @@
 /*
  * The referee for the lab's own commands (npm run referee, npm run doctor). It is downloaded once into .lab/, outside
- * git, so an agent never reads it as part of the repository. To score the service, this script starts the built
- * service itself on a free port, waits until it answers, points the referee at it, and stops it again: on Windows
- * with taskkill, which also ends anything the service started.
+ * git, so an agent never reads it as part of the repository.
  */
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';

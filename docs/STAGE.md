@@ -1,6 +1,6 @@
 # Stage 1-bare
 
-The agent implemented TICKET-142 with no guardrails at all: no CLAUDE.md, no checks, no hooks.
+The agent implemented TICKET-142 without a CLAUDE.md, checks or hooks.
 The ticket's ten points are correct, and it wrote 14 new tests (25 in all). It left everything else as it was.
 Ask your agent to review the change (the prompt is on the slide) and compare its list with the referee.
 
