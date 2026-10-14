@@ -1,8 +1,8 @@
 # Guardrails lab · order service in C#
 
-The hands-on repository of session 2 of Agentic Coding (agentcode.page/2): one small order service (customers,
-orders, a bulk discount, shipping, an in-memory SQLite database), one open ticket (`docs/TICKET-142.md`), and the
-guardrails we put around one coding agent, stage by stage.
+The hands-on repository of session 2 of Agentic Coding (agentcode.page/2): a small order service (customers,
+orders, a bulk discount, shipping, an in-memory SQLite database) with an open ticket (`docs/TICKET-142.md`), and
+the guardrails we put around a coding agent, stage by stage.
 
 ## Before the session
 
@@ -33,12 +33,12 @@ asking, and the exercises go faster.
 The build warns that `System.Linq.Dynamic.Core` 1.5.1 has a known vulnerability. That is expected: the vulnerable
 package is one of the planted problems. Don't update it by hand; the session builds on it.
 
-## In the session: every step is one command
+## In the session: the lab's commands
 
 | Command | What it does |
 |---|---|
 | `npm run stages` | lists the stages of the session and marks where you are |
-| `npm run stage -- <name>` | switches to a stage (e.g. `npm run stage -- 4-guarded`); your current work is committed first, nothing is lost |
+| `npm run stage -- <name>` | switches to a stage (e.g. `npm run stage -- 4-guarded`); your current work is committed first, so you can come back to it |
 | `npm run referee` | starts the service on a port of its own, scores it with the referee (23 black-box checks over HTTP), and stops it again |
 | `npm run mutate` | a colleague's one-character change at the free-shipping threshold; then `dotnet test`: do the tests notice? |
 | `npm run restore` | undoes the mutation |
@@ -57,7 +57,7 @@ read when a session starts. From the `4-guarded` stage on, the hooks are wired f
 `/hooks` in Codex and approve them.
 
 Use your own agent as you normally do. Your personal configuration (a global CLAUDE.md, rules, hooks) also shapes
-what the agent does here, so your result may differ from the reference. Every stage branch holds the reference
+what the agent does here, so your result may differ from ours. Every stage branch holds our
 result of its step, so you can always compare.
 
 ## The service
@@ -99,7 +99,7 @@ The stage design follows Felhő's (Gergely Hodicska) guardrails lab for TypeScri
 [github.com/felho/guardrails-lab](https://github.com/felho/guardrails-lab), which is in turn derived from Konrad
 Kiss's six-language lab. The referee is kept outside the repository on purpose, so that agents can't read it.
 
-## For organisers
+## For organizers
 
 How the branches relate, and how to change things without breaking a stage:
 
