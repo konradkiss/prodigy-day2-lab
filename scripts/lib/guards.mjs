@@ -25,6 +25,7 @@ export const ROOT = real(resolve(dirname(fileURLToPath(import.meta.url)), '..', 
 const PROTECTED = [
   'scripts/', '.claude/', '.codex/', '.config/dotnet-tools.json',
   '.secretlintrc.json', '.secretlintignore', 'CodeMetricsConfig.txt', 'package.json', 'package-lock.json',
+  '.evidence/', '.phase-implement',
 ];
 /* File names protected wherever they are: MSBuild and analyzer configuration applies to every directory below it. */
 const PROTECTED_NAMES = ['Directory.Build.props', 'Directory.Build.targets', 'Directory.Packages.props', '.editorconfig', '.globalconfig'];

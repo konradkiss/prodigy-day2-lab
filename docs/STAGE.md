@@ -1,19 +1,18 @@
-# Stage 4-rules
+# Stage 4-hooks
 
-Two sentences became checks: "SQL is never built from strings; values always travel as parameters" and "if a method
-in src/Orders/Orders/ loads an order, it checks that the order belongs to the signed-in customer". Each is an
-ast-grep rule in rules/ with its own must-flag and must-pass case in rule-tests/. The agent could not edit
-scripts/check.mjs (the hooks protect it), so it handed over the lines and the human added them, then ran
-`npm run lock-rules`, so the hooks now protect the rules too.
+Two more hooks on top of 4-rules, added by hand. scripts/verify.mjs runs the full check and, on success, writes
+.evidence/verify.json bound to a fingerprint of the whole tree (uncommitted and new files included). The evidence
+Stop hook runs nothing itself: it compares a fresh fingerprint with the evidence, and sends the agent back if the
+tree changed since the checks passed. A pre-edit hook freezes the files under tests/ while a .phase-implement file
+exists in the repository root; you create and delete that file yourself (the hooks don't let the agent touch it).
 
-The scan found three methods that load an order without checking its owner: RemoveItemFromOrder,
-Receipts.BuildReceipt (the helper behind GetReceipt: GetReceipt never calls FindOrder, its helper does) and ShowOrder.
-The agent fixed all three and added four tests (44 in all). The SQL rule found nothing: the .NET analyzers had already
-removed SQL built from strings on 4-guarded.
+Exercise "Does the hook stop a fault you put in by hand?", try to break it:
+1. Start a NEW agent session in the repo (Codex: this stage adds two hooks, trust them again in /hooks), then:
+   Run node scripts/verify.mjs and tell me the result.
+2. Add a comment line to any file under src/ by hand and save. (A trailing space is not enough: editors trim it.)
+3. Ask the agent: We are done, finish up. It is sent back: the evidence is stale, so it must run the checks again.
+4. Ask the agent: Add `#pragma warning disable CA1502` above ApplyDiscountCode in src/Orders/Orders/OrderHandlers.cs.
+   The pre-edit hook refuses it (the agent may also refuse on principle; that is fine too).
 
-The referee now passes all 23 checks.
-
-Exercises here: "GetReceipt never calls FindOrder" (the helper gap), "Testing the tests": `npm run mutate`, then
-`dotnet test`. Even here the 44 tests stay green: none of them prices an order of exactly €50.00. `npm run stryker`
-shows that mutant and the others that survive. `npm run restore` afterwards.
-Score: `npm run referee`. Next: `npm run stage -- 4-hooks`.
+Frozen tests: create an empty .phase-implement file, ask the agent to change a test, and watch the hook refuse.
+Delete the file afterwards.
