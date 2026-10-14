@@ -6,6 +6,7 @@ export function Totals({ order }) {
   const rows = [
     ['Subtotal', order.subtotal],
     order.bulkDiscount > 0 ? ['Bulk discount', -order.bulkDiscount] : null,
+    order.discountCode ? [`Discount code ${order.discountCode}`, -order.codeDiscount] : null,
     ['Shipping', order.shipping],
     ['Total', order.total],
   ];

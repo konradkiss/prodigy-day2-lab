@@ -108,6 +108,75 @@ public class HandlersTests
         Assert.Equal(409, OrderHandlers.RemoveItemFromOrder(Request(customer: 3), 1004, "TEE").Status);
     }
 
+    // POST /orders/:id/discount
+
+    static Response ApplyCode(int customer, int orderId, string code) =>
+        OrderHandlers.ApplyDiscountCode(Request(customer: customer, body: new { code }), orderId);
+
+    [Fact]
+    public void AppliesACodeTypedInLowerCaseAndShowsItOnTheOrder()
+    {
+        Assert.Equal(200, ApplyCode(1, 1002, "save15").Status);
+        var body = Body(OrderHandlers.GetOrder(Request(customer: 1), 1002));
+        Assert.Equal("SAVE15", body.GetProperty("discountCode").GetString());
+        Assert.Equal(750, body.GetProperty("codeDiscount").GetInt32());
+        Assert.Equal(Pricing.Shipping, body.GetProperty("shipping").GetInt32());
+        Assert.Equal(4250 + Pricing.Shipping, body.GetProperty("total").GetInt32());
+    }
+
+    [Fact]
+    public void ReplacesThePreviousCode()
+    {
+        ApplyCode(1, 1002, "SAVE15");
+        var body = Body(ApplyCode(1, 1002, "WELCOME10"));
+        Assert.Equal("WELCOME10", body.GetProperty("discountCode").GetString());
+        Assert.Equal(500, body.GetProperty("codeDiscount").GetInt32());
+    }
+
+    [Fact]
+    public void RefusesAnExpiredCodeWithItsLastDay()
+    {
+        var res = ApplyCode(1, 1002, "SUMMER25");
+        Assert.Equal(400, res.Status);
+        Assert.Equal("the code SUMMER25 expired on 2026-08-31", Body(res).GetProperty("error").GetString());
+        Assert.Equal(JsonValueKind.Null, Body(OrderHandlers.GetOrder(Request(customer: 1), 1002)).GetProperty("discountCode").ValueKind);
+    }
+
+    [Fact]
+    public void RefusesACodeBelowItsMinimumAndKeepsThePreviousOne()
+    {
+        ApplyCode(1, 1006, "WELCOME10");
+        OrderHandlers.RemoveItemFromOrder(Request(customer: 1), 1006, "MUG");
+        OrderHandlers.AddItemToOrder(Request(customer: 1, body: new { sku = "MUG", qty = 3 }), 1006);
+        var res = ApplyCode(1, 1006, "SAVE15");
+        Assert.Equal(400, res.Status);
+        Assert.Equal("the code SAVE15 needs an order of at least €50.00", Body(res).GetProperty("error").GetString());
+        Assert.Equal("WELCOME10", Body(OrderHandlers.GetOrder(Request(customer: 1), 1006)).GetProperty("discountCode").GetString());
+    }
+
+    [Fact]
+    public void RefusesAnUnknownOrMissingCode()
+    {
+        Assert.Equal(400, ApplyCode(1, 1002, "NOPE").Status);
+        Assert.Equal(400, OrderHandlers.ApplyDiscountCode(Request(customer: 1), 1002).Status);
+    }
+
+    [Fact]
+    public void RefusesACodeOnAPaidOrAnotherCustomersOrder()
+    {
+        Assert.Equal(409, ApplyCode(3, 1004, "WELCOME10").Status);
+        Assert.Equal(404, ApplyCode(2, 1002, "WELCOME10").Status);
+        Assert.Equal(401, OrderHandlers.ApplyDiscountCode(Request(body: new { code = "WELCOME10" }), 1002).Status);
+    }
+
+    [Fact]
+    public void PricesTheReceiptWithTheAppliedCode()
+    {
+        ApplyCode(1, 1002, "SAVE15");
+        var receipt = Body(OrderHandlers.GetReceipt(Request(customer: 1), 1002)).GetProperty("receipt").GetString();
+        Assert.EndsWith("Total  €47.40", receipt);
+    }
+
     // GET /orders/:id/receipt
 
     [Fact]

@@ -60,4 +60,42 @@ public class PricingTests
     {
         Assert.Equal(new Totals(0, 0, 0, 0), Pricing.PriceOrder(Order()));
     }
+
+    // discount codes
+
+    static DiscountCode Code(int percent, int minOrderCents = 0) => new("CODE", percent, minOrderCents, new DateOnly(2099, 12, 31));
+
+    [Fact]
+    public void TakesTheCodesPercentageOffTheGoodsAfterTheBulkDiscount()
+    {
+        var totals = Pricing.PriceOrder(Order(("MUG", 12, 1250)), Code(10));
+        Assert.Equal(750, totals.BulkDiscount);
+        Assert.Equal(1425, totals.CodeDiscount);
+        Assert.Equal(15000 - 750 - 1425, totals.Total);
+    }
+
+    [Fact]
+    public void RoundsTheCodeDiscountHalfUpToTheCent()
+    {
+        var totals = Pricing.PriceOrder(Order(("X", 1, 1010)), Code(15));
+        Assert.Equal(152, totals.CodeDiscount);
+        Assert.Equal(1010 - 152 + Pricing.Shipping, totals.Total);
+    }
+
+    [Fact]
+    public void DecidesFreeShippingAfterTheCodeDiscount()
+    {
+        var totals = Pricing.PriceOrder(Order(("MUG", 4, 1250)), Code(15, 5000));
+        Assert.Equal(750, totals.CodeDiscount);
+        Assert.Equal(Pricing.Shipping, totals.Shipping);
+        Assert.Equal(4250 + Pricing.Shipping, totals.Total);
+    }
+
+    [Fact]
+    public void GivesNoCodeDiscountOnceTheGoodsFallBelowTheMinimum()
+    {
+        var totals = Pricing.PriceOrder(Order(("MUG", 3, 1250)), Code(15, 5000));
+        Assert.Equal(0, totals.CodeDiscount);
+        Assert.Equal(3750 + Pricing.Shipping, totals.Total);
+    }
 }

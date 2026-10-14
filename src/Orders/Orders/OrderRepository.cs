@@ -61,6 +61,15 @@ public static class OrderRepository
         cmd.ExecuteNonQuery();
     }
 
+    public static void SetDiscountCode(int orderId, string code)
+    {
+        using var cmd = Db.Connection.CreateCommand();
+        cmd.CommandText = "UPDATE orders SET discount_code = $code WHERE id = $orderId";
+        cmd.Parameters.AddWithValue("$orderId", orderId);
+        cmd.Parameters.AddWithValue("$code", code);
+        cmd.ExecuteNonQuery();
+    }
+
     public static bool ProductExists(string sku)
     {
         using var cmd = Db.Connection.CreateCommand();
