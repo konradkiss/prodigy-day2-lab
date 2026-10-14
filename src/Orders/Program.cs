@@ -9,6 +9,13 @@ var app = builder.Build();
 
 app.UseExceptionHandler(errors => errors.Run(context => Send(new Response(500, new { error = "internal error" })).ExecuteAsync(context)));
 
+// frontend
+var pub = Path.Combine(AppContext.BaseDirectory, "../../../public/");
+app.MapGet("/", () => Results.Content(File.ReadAllText(pub + "index.html"), "text/html"));
+app.MapGet("/app.js", () => Results.Content(File.ReadAllText(pub + "app.js"), "text/javascript"));
+app.MapGet("/{file}.js", (string file) =>
+    File.Exists(pub + file + ".js") ? Results.Content(File.ReadAllText(pub + file + ".js"), "text/javascript") : Results.NotFound());
+
 app.MapGet("/orders/{id:int}", async (HttpRequest incoming, int id) =>
     Send(OrderHandlers.GetOrder(await ReadRequest(incoming), id)));
 app.MapPost("/orders/{id:int}/items", async (HttpRequest incoming, int id) =>

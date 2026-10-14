@@ -5,6 +5,7 @@ using static Orders.Http;
 using static Orders.Orders.OrderRepository;
 using static Orders.Orders.Pricing;
 using static Orders.Orders.Receipts;
+using static Orders.Utils;
 
 namespace Orders.Orders;
 
@@ -29,6 +30,13 @@ public static class OrderHandlers
         };
     }
 
+    // same as present but for the list
+    public static object PresentForList(dynamic o)
+    {
+        var p = PriceOrder(o);
+        return new { o.Id, o.Status, o.DiscountCode, o.Items, p.Subtotal, p.BulkDiscount, p.Shipping, p.Total };
+    }
+
     /* GET /orders/:id */
     public static Response GetOrder(Request req, int id)
     {
@@ -41,24 +49,22 @@ public static class OrderHandlers
     /* POST /orders/:id/items  { sku, qty } */
     public static Response AddItemToOrder(Request req, int id)
     {
-        var customer = CurrentCustomer(req);
-        if (customer == null) return new Response(401, new { error = "sign in first" });
+        var cust = GetCust(req);
+        if (cust == null) return Err(401, "not logged in");
         var order = FindOrder(id);
-        if (order == null || order.CustomerId != customer.Id) return NotFound("order");
-        if (order.Status != "open") return new Response(409, new { error = $"the order is already {order.Status}" });
+        if (!CheckStuff(order, cust)) return NotFound("order");
+        if (order.Status != "open") return new Response(409, new { error = "order is " + order.Status });
 
         var body = req.Body;
-        JsonElement sku = default, qty = default;
-        if (body.ValueKind == JsonValueKind.Object)
-        {
-            body.TryGetProperty("sku", out sku);
-            body.TryGetProperty("qty", out qty);
-        }
-        if (sku.ValueKind != JsonValueKind.String || !ProductExists(sku.GetString())) return BadRequest("unknown product");
-        var n = qty.ValueKind == JsonValueKind.Number ? qty.GetDouble() : double.NaN;
-        if (!double.IsInteger(n) || n < 1 || n > 99) return BadRequest("qty must be between 1 and 99");
+        if (body.ValueKind != JsonValueKind.Object || !body.TryGetProperty("sku", out var sku)) return Err2("sku missing");
+        if (sku.ValueKind != JsonValueKind.String) return Err2("sku must be string");
+        if (!ProductExists(sku.GetString())) return BadRequest("unknown product");
+        if (!body.TryGetProperty("qty", out var qty) || qty.ValueKind == JsonValueKind.Null) return Err2("qty missing");
+        if (qty.ValueKind != JsonValueKind.Number || !qty.TryGetInt32(out var n)) return Err2("qty must be int");
+        if (n < 1) return Err2("qty too small");
+        if (n > 99) return Err2("qty too big");
 
-        AddItem(order.Id, sku.GetString(), (int)n);
+        AddItem(order.Id, sku.GetString(), n);
         return new Response(200, Present(FindOrder(id)));
     }
 
@@ -70,6 +76,7 @@ public static class OrderHandlers
         var order = FindOrder(id);
         if (order == null) return NotFound("order");
         if (order.Status != "open") return new Response(409, new { error = $"the order is already {order.Status}" });
+        // if (order.CustomerId != customer.Id) return NotFound("order"); // breaks the admin tool, see #88
 
         RemoveItem(order.Id, sku);
         return new Response(200, Present(FindOrder(id)));
@@ -89,6 +96,6 @@ public static class OrderHandlers
     {
         if (req.Headers["X-Staff-Token"] != StaffToken) return new Response(403, new { error = "staff only" });
         var orders = FindOrdersByStatus(status).AsQueryable().OrderBy("CustomerId, Id").ToList();
-        return new Response(200, orders.Select(Present).ToList());
+        return new Response(200, orders.Select(o => PresentForList(o)).ToList());
     }
 }
