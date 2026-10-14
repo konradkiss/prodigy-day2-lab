@@ -1,16 +1,19 @@
-# Stage 4-guarded-ticket
+# Stage 4-rules
 
-The ticket, implemented under the hooks of 4-guarded. The two questions the TypeScript agent asked were answered in
-the prompt up front: the minimum is re-checked every time the order is priced, a code that no longer qualifies stays
-with a discount of 0, but applying a code that does not qualify right now is still refused; dates are in UTC.
-npm run check is green; 40 tests (22 new).
+Two sentences became checks: "SQL is never built from strings; values always travel as parameters" and "if a method
+in src/Orders/Orders/ loads an order, it checks that the order belongs to the signed-in customer". Each is an
+ast-grep rule in rules/ with its own must-flag and must-pass case in rule-tests/. The agent could not edit
+scripts/check.mjs (the hooks protect it), so it handed over the lines and the human added them, then ran
+`npm run lock-rules`, so the hooks now protect the rules too.
 
-Worth knowing: the agent wrote every file through Bash, never with its Edit or Write tools, so the after-edit hooks
-never saw a change. The Stop hook's full check is what held.
+The scan found three methods that load an order without checking its owner: RemoveItemFromOrder,
+Receipts.BuildReceipt (the helper behind GetReceipt: GetReceipt never calls FindOrder, its helper does) and ShowOrder.
+The agent fixed all three and added four tests (44 in all). The SQL rule found nothing: the .NET analyzers had already
+removed SQL built from strings on 4-guarded.
 
-The referee gives 21 of 23. The two open items are the ones no general check can see: ownership of remove-item and
-of the receipt. (In the TypeScript lab the warehouse SQL was open here too; in C# the .NET analyzers' CA2100 caught
-it on 4-guarded.)
+The referee now passes all 23 checks.
 
-Exercises here: "A sentence becomes a check" (start your agent, paste the rules prompt; the agent will hand you lines
-for scripts/check.mjs, you add them). Then `npm run lock-rules`. Next: `npm run stage -- 4-rules`.
+Exercises here: "GetReceipt never calls FindOrder" (the helper gap), "Testing the tests": `npm run mutate`, then
+`dotnet test`. Even here the 44 tests stay green: none of them prices an order of exactly €50.00. `npm run stryker`
+shows that mutant and the others that survive. `npm run restore` afterwards.
+Score: `npm run referee`. Next: `npm run stage -- 4-hooks`.
