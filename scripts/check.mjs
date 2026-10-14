@@ -65,6 +65,16 @@ function test() {
   if (!r.ok) fail('tests', r.out.trim().split(/\r?\n/).slice(-120).join('\n'));
 }
 
+/* The repository's own ast-grep rules (rules/, sgconfig.yml): first their tests, then a scan of the project. */
+const AST_GREP = join(ROOT, 'node_modules', '@ast-grep', 'cli', process.platform === 'win32' ? 'ast-grep.exe' : 'ast-grep');
+function astGrep() {
+  if (!existsSync(AST_GREP)) { fail('ast-grep rules', 'ast-grep is not installed: run npm ci'); return; }
+  const t = run(AST_GREP, ['test']);
+  if (!t.ok) { fail('ast-grep rule tests', t.out); return; }
+  const s = run(AST_GREP, ['scan', '--color', 'never']);
+  if (!s.ok) fail('ast-grep rules (SQL as parameters, order ownership)', s.out);
+}
+
 /* The project a file belongs to: the nearest directory upwards with a .csproj in it. */
 function projectOf(rel) {
   for (let dir = dirname(join(ROOT, rel)); dir.startsWith(ROOT) && dir !== ROOT; dir = dirname(dir)) {
@@ -80,6 +90,10 @@ function checkFile(file) {
   scanSuppressions([rel]);
   if (existsSync(join(ROOT, rel))) secretlint([rel]);
   if (/\.(?:cs|csproj)$/i.test(rel)) {
+    if (rel.endsWith('.cs')) {
+      const s = run(AST_GREP, ['scan', '--color', 'never', rel]);
+      if (!s.ok) fail(`ast-grep rules on ${rel}`, s.out);
+    }
     const project = projectOf(rel) ?? 'Orders.sln';
     const restored = existsSync(join(ROOT, dirname(project), 'obj', 'project.assets.json'));
     build(project, rel.endsWith('.csproj') || !restored);
@@ -92,6 +106,7 @@ function checkAll() {
   const r = run('git', ['ls-files', '-co', '--exclude-standard']);
   scanSuppressions(r.ok ? r.out.split('\n').filter(Boolean) : []);
   secretlint(['**/*']);
+  astGrep();
   if (build('Orders.sln')) test();
 }
 

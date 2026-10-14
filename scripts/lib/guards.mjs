@@ -107,6 +107,7 @@ const PROJECT = [
 ];
 const ANY = [
   ['secretlint-disable comment', /secretlint-disable/g],
+  ['ast-grep-ignore comment', /ast-grep-ignore/g],
 ];
 
 function rulesFor(rel) {
