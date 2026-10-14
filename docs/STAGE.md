@@ -1,22 +1,16 @@
-# Stage 4-guarded
+# Stage 4-guarded-ticket
 
-One prompt built this (docs/guardrail-prompt.md): Directory.Build.props (nullable, warnings as errors, the .NET
-analyzers at latest-all with code style in the build, complexity at most 10 per method, the NuGet audit as an
-error), secretlint with a small rule of its own for the planted key, scripts/check.mjs (`npm run check`), and four
-hooks under scripts/hooks/ (check after every edit, no silencing, no --no-verify, the full check before finishing).
-The existing code was fixed where the checks complained. The ticket is NOT done yet.
+The ticket, implemented under the hooks of 4-guarded. The two questions the TypeScript agent asked were answered in
+the prompt up front: the minimum is re-checked every time the order is priced, a code that no longer qualifies stays
+with a discount of 0, but applying a code that does not qualify right now is still refused; dates are in UTC.
+npm run check is green; 40 tests (22 new).
 
-What the checks found in the existing code: the vulnerable System.Linq.Dynamic.Core (removed), the hard-coded staff
-token (now only from STAFF_TOKEN), SQL built from strings in two places (CA2100: now parameters), the two crashes
-(nullable warnings: now 401 and 404), one method over the complexity limit. They did not find the two missing
-owner checks (remove-item and the receipt): nothing generic knows whose order it is. The agent listed both as out
-of scope.
+Worth knowing: the agent wrote every file through Bash, never with its Edit or Write tools, so the after-edit hooks
+never saw a change. The Stop hook's full check is what held.
 
-Its own hooks went live during the run and refused its later edits to scripts/, so it handed three hook fixes to
-the human as a patch; they are the next commit. Codex hooks (.codex/hooks.json) were added by hand.
+The referee gives 21 of 23. The two open items are the ones no general check can see: ownership of remove-item and
+of the receipt. (In the TypeScript lab the warehouse SQL was open here too; in C# the .NET analyzers' CA2100 caught
+it on 4-guarded.)
 
-Exercises here: "The guardrail prompt, part by part" (read the prompt and the diff), "The ticket on the guarded
-stage" (start a NEW agent session in the repo, then: Implement docs/TICKET-142.md.)
-Codex users: trust the hooks once with /hooks, or Codex skips them.
-If the agent asks a question, answer it; that is the CLAUDE.md working. Score: `npm run referee` (14 of 23: the
-ticket is not done yet). Next: `npm run stage -- 4-guarded-ticket`.
+Exercises here: "A sentence becomes a check" (start your agent, paste the rules prompt; the agent will hand you lines
+for scripts/check.mjs, you add them). Then `npm run lock-rules`. Next: `npm run stage -- 4-rules`.
