@@ -17,6 +17,7 @@
     "referee": "node scripts/lab.mjs referee",
     "mutate": "node scripts/lab.mjs mutate",
     "restore": "node scripts/lab.mjs restore",
+    "wire-rules": "node scripts/lab.mjs wire-rules",
     "lock-rules": "node scripts/lab.mjs lock-rules"
   },
   "devDependencies": {
