@@ -5,6 +5,7 @@
  */
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
+import { ensureReferee, REFEREE_URL, refereeRuns } from './lab-referee.mjs';
 
 const WIN = process.platform === 'win32';
 const checks = [];
@@ -31,6 +32,14 @@ check('coding agent (claude or codex)', () => {
   }
   throw new Error('neither claude nor codex on PATH');
 });
+
+/* The referee comes from agentcode.page: a blocked site or a proxy shows up here, not in the middle of the session. */
+const referee = await ensureReferee();
+if (!referee.ok) checks.push([`referee (${REFEREE_URL})`, false, referee.why]);
+else {
+  const runs = refereeRuns();
+  checks.push([`referee (${REFEREE_URL})`, runs.ok, runs.ok ? `${referee.how}, runs` : runs.why]);
+}
 
 let red = 0;
 for (const [name, ok, detail] of checks) { if (!ok) red++; console.log(`${ok ? '✓' : '✗'} ${name}${detail ? `  ${detail}` : ''}`); }

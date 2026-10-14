@@ -7,11 +7,13 @@
  *   npm run referee             score the service with the referee (downloaded on first use, kept in .lab/)
  *   npm run mutate              a colleague's one-character change at the free-shipping threshold (then: dotnet test)
  *   npm run restore             undo the mutation
+ *   npm run wire-rules          after the rules exercise: the rule tests and the scan join scripts/check.mjs, then lock-rules
  *   npm run lock-rules          after you wrote your own rules: the hooks protect rules/, rule-tests/ and sgconfig.yml
  *   npm run doctor              is this laptop ready?
  */
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { ensureReferee, HOW_TO_FREE_3000, portInUse, REFEREE, startService, stopService } from './lab-referee.mjs';
 
 const STAGES = [
   ['0-start', 'the untouched lab, the ticket, the doctor'],
@@ -22,7 +24,6 @@ const STAGES = [
   ['4-rules', 'ast-grep rules with their own tests, wired into the check'],
   ['4-hooks', 'evidence bound to the tree, frozen tests (try to break it)'],
 ];
-const REFEREE_URL = 'https://agentcode.page/lab/referee.mjs';
 const WIN = process.platform === 'win32';
 
 const root = spawnSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' }).stdout.trim();
@@ -86,18 +87,31 @@ function stage(name) {
   if (existsSync('docs/STAGE.md')) console.log(`\n${readFileSync('docs/STAGE.md', 'utf8')}`);
 }
 
-/* The referee starts the service itself: build it first, then start the built program directly (no dotnet run), so it is up in a second. */
+/*
+ * The referee: this script builds the service, starts it on a free port with fresh data, runs the referee against it,
+ * and stops it again, also on Windows (taskkill), so no service is left running between rounds.
+ */
 async function referee() {
-  mkdirSync('.lab', { recursive: true });
-  if (!existsSync('.lab/referee.mjs')) {
-    const res = await fetch(REFEREE_URL);
-    if (!res.ok) { console.error(`cannot download the referee (${res.status})`); process.exit(1); }
-    writeFileSync('.lab/referee.mjs', await res.text());
-    console.log('referee downloaded to .lab/referee.mjs');
+  const got = await ensureReferee();
+  if (!got.ok) { console.error(got.why); process.exit(1); }
+  if (got.how !== 'already in .lab/') console.log(`referee ${got.how} to ${REFEREE}`);
+  if (await portInUse(3000)) {
+    console.log(`note: port 3000 is in use (a service started with npm start, or one left over). The referee uses its own port, so this run is fine.\n${HOW_TO_FREE_3000}\n`);
   }
   const build = quiet('dotnet', ['build', 'src/Orders', '-c', 'Debug', '-v', 'q', '-nologo']);
   if (build.status !== 0) { console.error(`the service does not build, so the referee cannot start it:\n${(build.stdout + build.stderr).trim()}`); process.exit(1); }
-  process.exit(run('node', ['.lab/referee.mjs', '--start', 'dotnet src/Orders/bin/Debug/net10.0/Orders.dll', ...process.argv.slice(3)]));
+  let service;
+  try {
+    service = await startService();
+  } catch (e) {
+    console.error(e.message);
+    process.exit(1);
+  }
+  const stop = () => stopService(service.child);
+  process.once('SIGINT', () => { stop(); process.exit(130); });
+  const status = run('node', [REFEREE, service.base, ...process.argv.slice(3)]);
+  stop();
+  process.exit(status);
 }
 
 /* The one-character mutation of the testing exercise: >= becomes > at the free-shipping threshold. Run the tests yourself. */
@@ -138,6 +152,60 @@ function restore() {
 }
 
 /*
+ * After the rules exercise: the agent wrote rules/, rule-tests/ and sgconfig.yml, but it cannot add them to
+ * scripts/check.mjs (the hooks protect it), so the human runs this. It adds exactly the lines of the 4-rules stage:
+ * the rule tests and a scan in the full check, a scan of the edited .cs file in file mode. Then it locks the rules
+ * like lock-rules. Idempotent: on a stage where the rules are wired it says so and changes nothing in the check.
+ */
+const CHECK = 'scripts/check.mjs';
+const AST_GREP_FUNCTION = `/* The repository's own ast-grep rules (rules/, sgconfig.yml): first their tests, then a scan of the project. */
+const AST_GREP = join(ROOT, 'node_modules', '@ast-grep', 'cli', process.platform === 'win32' ? 'ast-grep.exe' : 'ast-grep');
+function astGrep() {
+  if (!existsSync(AST_GREP)) { fail('ast-grep rules', 'ast-grep is not installed: run npm ci'); return; }
+  const t = run(AST_GREP, ['test']);
+  if (!t.ok) { fail('ast-grep rule tests', t.out); return; }
+  const s = run(AST_GREP, ['scan', '--color', 'never']);
+  if (!s.ok) fail('ast-grep rules (SQL as parameters, order ownership)', s.out);
+}
+
+`;
+const AST_GREP_FILE = `    if (rel.endsWith('.cs')) {
+      const s = run(AST_GREP, ['scan', '--color', 'never', rel]);
+      if (!s.ok) fail(\`ast-grep rules on \${rel}\`, s.out);
+    }
+`;
+const WIRING = [
+  { what: 'astGrep(): the rule tests, then a scan of the project', anchor: '/* The project a file belongs to', text: AST_GREP_FUNCTION, before: true },
+  { what: 'the full check (checkAll) runs astGrep()', anchor: "  secretlint(['**/*']);\n", text: '  astGrep();\n' },
+  { what: 'file mode (checkFile) scans the edited .cs file', anchor: '  if (/\\.(?:cs|csproj)$/i.test(rel)) {\n', text: AST_GREP_FILE },
+];
+
+function wireRules() {
+  if (!existsSync(CHECK)) { console.error(`no ${CHECK} on this stage: the check arrives on 4-guarded. Nothing to wire.`); process.exit(1); }
+  const rules = existsSync('rules') ? readdirSync('rules').filter((f) => /\.ya?ml$/.test(f)) : [];
+  if (!existsSync('sgconfig.yml') || rules.length === 0) {
+    console.error('no rules yet: the rules exercise writes rules/*.yml and sgconfig.yml. Run npm run wire-rules after it.');
+    process.exit(1);
+  }
+  let check = readFileSync(CHECK, 'utf8');
+  if (check.includes('function astGrep(')) {
+    console.log(`already wired: ${CHECK} runs the rule tests and the scan (${rules.join(', ')}).`);
+  } else {
+    const missing = WIRING.filter((w) => !check.includes(w.anchor));
+    if (missing.length) {
+      console.error(`${CHECK} is not the lab's own (cannot find: ${missing.map((w) => JSON.stringify(w.anchor.trim())).join(', ')}). Nothing changed; add the lines by hand.`);
+      process.exit(1);
+    }
+    for (const w of WIRING) check = check.replace(w.anchor, w.before ? w.text + w.anchor : w.anchor + w.text);
+    writeFileSync(CHECK, check);
+    console.log(`wired ${rules.join(', ')} into ${CHECK}:`);
+    for (const w of WIRING) console.log(`  + ${w.what}`);
+  }
+  lockRules();
+  console.log('\nnow: npm run check');
+}
+
+/*
  * After the rules exercise: the agent wrote rules/ and rule-tests/; from now on the hooks must treat them like the
  * check's own configuration, so no agent can loosen a rule to make code pass. Idempotent; only works where the
  * hooks exist (from the 4-guarded stage on). The hooks read the extra protected paths from this file.
@@ -161,4 +229,5 @@ else if (command === 'referee') await referee();
 else if (command === 'mutate') mutate();
 else if (command === 'restore') restore();
 else if (command === 'lock-rules') lockRules();
-else { console.error('usage: lab.mjs stages | stage <name> | referee | mutate | restore | lock-rules'); process.exit(1); }
+else if (command === 'wire-rules') wireRules();
+else { console.error('usage: lab.mjs stages | stage <name> | referee | mutate | restore | wire-rules | lock-rules'); process.exit(1); }
