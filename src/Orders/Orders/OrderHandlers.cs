@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Orders.Customers;
 using static Orders.Auth;
 using static Orders.Http;
 using static Orders.Orders.OrderRepository;
@@ -53,7 +54,7 @@ internal static class OrderHandlers
         if (!double.IsInteger(qty) || qty < 1 || qty > 99) return BadRequest("qty must be between 1 and 99");
 
         AddItem(order.Id, sku, (int)qty);
-        return ShowOrder(id);
+        return ShowOrder(customer, id);
     }
 
     /* The { sku, qty } of a request body: sku is null unless it is a string, qty is NaN unless it is a number. */
@@ -65,8 +66,12 @@ internal static class OrderHandlers
         return (sku, qty);
     }
 
-    private static Response ShowOrder(int id) =>
-        FindOrder(id) is { } order ? new Response(200, Present(order)) : NotFound("order");
+    private static Response ShowOrder(Customer customer, int id)
+    {
+        var order = FindOrder(id);
+        if (order == null || order.CustomerId != customer.Id) return NotFound("order");
+        return new Response(200, Present(order));
+    }
 
     /* POST /orders/:id/discount  { code } – applies a discount code, replacing any previous one */
     public static Response ApplyDiscountCode(Request req, int id)
@@ -88,7 +93,7 @@ internal static class OrderHandlers
         if (refusal != null) return BadRequest(refusal);
 
         SetDiscountCode(order.Id, code.Code);
-        return ShowOrder(id);
+        return ShowOrder(customer, id);
     }
 
     /* The code of a { code } request body, or null unless it is a string. */
@@ -104,20 +109,21 @@ internal static class OrderHandlers
         var customer = CurrentCustomer(req);
         if (customer == null) return new Response(401, new { error = "sign in first" });
         var order = FindOrder(id);
-        if (order == null) return NotFound("order");
+        if (order == null || order.CustomerId != customer.Id) return NotFound("order");
         if (order.Status != "open") return new Response(409, new { error = $"the order is already {order.Status}" });
 
         RemoveItem(order.Id, sku);
-        return ShowOrder(id);
+        return ShowOrder(customer, id);
     }
 
     /* GET /orders/:id/receipt – a plain-text receipt to print */
     public static Response GetReceipt(Request req, int id)
     {
-        if (CurrentCustomer(req) == null) return new Response(401, new { error = "sign in first" });
-        var receipt = BuildReceipt(id);
-        if (receipt == null) return NotFound("order");
-        return new Response(200, new { receipt });
+        var customer = CurrentCustomer(req);
+        if (customer == null) return new Response(401, new { error = "sign in first" });
+        var order = FindOrder(id);
+        if (order == null || order.CustomerId != customer.Id) return NotFound("order");
+        return new Response(200, new { receipt = BuildReceipt(order, customer) });
     }
 
     /* GET /warehouse/orders?status=paid – the packing team's list, grouped by customer */

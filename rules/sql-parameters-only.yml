@@ -1,0 +1,39 @@
+id: sql-parameters-only
+language: csharp
+severity: error
+message: SQL is built from strings here. Write the statement as one string literal and pass every value with cmd.Parameters.
+note: |
+  The SQL text must be a constant string literal ("...", @"..." or """..."""). Interpolation, concatenation,
+  string.Format, a variable or += all put values (or text derived from them) into the statement itself.
+  Values travel as parameters: cmd.CommandText = "... WHERE id = $id"; cmd.Parameters.AddWithValue("$id", id);
+utils:
+  sql-literal:
+    any:
+      - kind: string_literal
+      - kind: verbatim_string_literal
+      - kind: raw_string_literal
+rule:
+  any:
+    # cmd.CommandText = ..., cmd.CommandText += ..., new SqliteCommand { CommandText = ... }
+    - all:
+        - kind: assignment_expression
+        - has:
+            field: left
+            any:
+              - all: [{ kind: identifier }, { regex: ^CommandText$ }]
+              - all:
+                  - kind: member_access_expression
+                  - has: { field: name, regex: ^CommandText$ }
+        - any:
+            - not: { has: { field: operator, regex: ^=$ } }
+            - not: { has: { field: right, matches: sql-literal } }
+    # new SqliteCommand(sql, connection): the first argument is the SQL text
+    - all:
+        - kind: object_creation_expression
+        - has: { field: type, regex: Command$ }
+        - has:
+            field: arguments
+            has:
+              kind: argument
+              nthChild: 1
+              not: { has: { matches: sql-literal } }

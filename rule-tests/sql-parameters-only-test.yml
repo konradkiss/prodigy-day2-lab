@@ -1,0 +1,26 @@
+id: sql-parameters-only
+invalid:
+  - |
+    internal static class OrderRepository
+    {
+        public static List<Order> FindOrdersByStatus(string status)
+        {
+            using var cmd = Db.Connection.CreateCommand();
+            cmd.CommandText = $"SELECT id, customer_id, status, discount_code FROM orders WHERE status = '{status}'";
+            using var reader = cmd.ExecuteReader();
+            return ReadOrders(reader);
+        }
+    }
+valid:
+  - |
+    internal static class OrderRepository
+    {
+        public static List<Order> FindOrdersByStatus(string status)
+        {
+            using var cmd = Db.Connection.CreateCommand();
+            cmd.CommandText = "SELECT id, customer_id, status, discount_code FROM orders WHERE status = $status";
+            cmd.Parameters.AddWithValue("$status", status);
+            using var reader = cmd.ExecuteReader();
+            return ReadOrders(reader);
+        }
+    }

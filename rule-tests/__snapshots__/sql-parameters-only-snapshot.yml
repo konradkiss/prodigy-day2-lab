@@ -1,0 +1,26 @@
+id: sql-parameters-only
+snapshots:
+  ? |
+    internal static class OrderRepository
+    {
+        public static List<Order> FindOrdersByStatus(string status)
+        {
+            using var cmd = Db.Connection.CreateCommand();
+            cmd.CommandText = $"SELECT id, customer_id, status, discount_code FROM orders WHERE status = '{status}'";
+            using var reader = cmd.ExecuteReader();
+            return ReadOrders(reader);
+        }
+    }
+  : labels:
+    - source: cmd.CommandText = $"SELECT id, customer_id, status, discount_code FROM orders WHERE status = '{status}'"
+      style: primary
+      start: 173
+      end: 277
+    - source: CommandText
+      style: secondary
+      start: 177
+      end: 188
+    - source: cmd.CommandText
+      style: secondary
+      start: 173
+      end: 188

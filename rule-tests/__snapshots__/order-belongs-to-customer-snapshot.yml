@@ -1,0 +1,54 @@
+id: order-belongs-to-customer
+snapshots:
+  ? |
+    internal static class OrderHandlers
+    {
+        public static Response RemoveItemFromOrder(Request req, int id, string sku)
+        {
+            var customer = CurrentCustomer(req);
+            if (customer == null) return new Response(401, new { error = "sign in first" });
+            var order = FindOrder(id);
+            if (order == null) return NotFound("order");
+            RemoveItem(order.Id, sku);
+            return new Response(200, Present(order));
+        }
+    }
+  : labels:
+    - source: FindOrder(id)
+      style: primary
+      start: 278
+      end: 291
+    - source: |-
+        public static Response RemoveItemFromOrder(Request req, int id, string sku)
+            {
+                var customer = CurrentCustomer(req);
+                if (customer == null) return new Response(401, new { error = "sign in first" });
+                var order = FindOrder(id);
+                if (order == null) return NotFound("order");
+                RemoveItem(order.Id, sku);
+                return new Response(200, Present(order));
+            }
+      style: secondary
+      start: 42
+      end: 436
+    - source: order
+      style: secondary
+      start: 270
+      end: 275
+    - source: order = FindOrder(id)
+      style: secondary
+      start: 270
+      end: 291
+    - source: |-
+        public static Response RemoveItemFromOrder(Request req, int id, string sku)
+            {
+                var customer = CurrentCustomer(req);
+                if (customer == null) return new Response(401, new { error = "sign in first" });
+                var order = FindOrder(id);
+                if (order == null) return NotFound("order");
+                RemoveItem(order.Id, sku);
+                return new Response(200, Present(order));
+            }
+      style: secondary
+      start: 42
+      end: 436

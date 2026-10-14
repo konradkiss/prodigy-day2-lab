@@ -1,0 +1,41 @@
+id: order-belongs-to-customer
+language: csharp
+severity: error
+message: This method loads an order without checking that it belongs to the signed-in customer.
+note: |
+  Keep the loaded order in a variable and, in the same method, compare its owner with the customer:
+    var order = FindOrder(id);
+    if (order == null || order.CustomerId != customer.Id) return NotFound("order");
+  A method that has no customer must not load the order; pass it the customer, or the order its caller checked.
+files:
+  - src/Orders/Orders/**/*.cs
+utils:
+  loads-order:
+    any:
+      - pattern: FindOrder($$$)
+      - pattern: $_.FindOrder($$$)
+  owner-check:
+    any:
+      - pattern: $ORDER.CustomerId != $CUSTOMER.Id
+      - pattern: $ORDER.CustomerId == $CUSTOMER.Id
+      - pattern: $CUSTOMER.Id != $ORDER.CustomerId
+      - pattern: $CUSTOMER.Id == $ORDER.CustomerId
+# Every load of an order is reported on its own, so one checked order does not cover another.
+rule:
+  all:
+    - matches: loads-order
+    - inside: { kind: method_declaration, stopBy: end }
+    - any:
+        # the order is not even kept in a variable, so nothing can check it
+        - not:
+            inside: { kind: variable_declarator }
+        # the variable it is kept in is never compared with the customer in this method
+        - all:
+            - inside:
+                kind: variable_declarator
+                has: { field: name, pattern: $ORDER }
+            - inside:
+                kind: method_declaration
+                stopBy: end
+                not:
+                  has: { stopBy: end, matches: owner-check }

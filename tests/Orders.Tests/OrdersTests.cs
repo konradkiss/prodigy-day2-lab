@@ -76,6 +76,41 @@ public class OrdersTests
         Assert.Equal(409, res.Status);
     }
 
+    // DELETE /orders/:id/items/:sku
+
+    [Fact]
+    public void RemovesAnItemFromItsOwnersOrder()
+    {
+        var res = OrderHandlers.RemoveItemFromOrder(Helpers.Request(customer: 1), 1002, "MUG");
+        Assert.Equal(200, res.Status);
+        Assert.Equal(0, Shown(1002).GetProperty("Items").GetArrayLength());
+    }
+
+    [Fact]
+    public void LeavesAnotherCustomersOrderAlone()
+    {
+        var res = OrderHandlers.RemoveItemFromOrder(Helpers.Request(customer: 2), 1002, "MUG");
+        Assert.Equal(404, res.Status);
+        Assert.Equal(1, Shown(1002).GetProperty("Items").GetArrayLength());
+    }
+
+    // GET /orders/:id/receipt
+
+    [Fact]
+    public void PrintsAReceiptForItsOwner()
+    {
+        var res = OrderHandlers.GetReceipt(Helpers.Request(customer: 1), 1001);
+        Assert.Equal(200, res.Status);
+        Assert.StartsWith("Order 1001 · Alice Carter <alice@example.com>", JsonSerializer.SerializeToElement(res.Body).GetProperty("receipt").GetString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void HidesAnotherCustomersReceipt()
+    {
+        var res = OrderHandlers.GetReceipt(Helpers.Request(customer: 2), 1001);
+        Assert.Equal(404, res.Status);
+    }
+
     // GET /warehouse/orders
 
     [Fact]
