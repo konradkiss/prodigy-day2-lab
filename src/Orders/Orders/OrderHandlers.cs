@@ -1,4 +1,3 @@
-using System.Linq.Dynamic.Core;
 using System.Text.Json;
 using static Orders.Auth;
 using static Orders.Http;
@@ -8,10 +7,10 @@ using static Orders.Orders.Receipts;
 
 namespace Orders.Orders;
 
-public static class OrderHandlers
+internal static class OrderHandlers
 {
-    const string DefaultStaffToken = "whs_live_4f9a1c22e7b84d0f9a3e51c0";
-    static readonly string StaffToken = Environment.GetEnvironmentVariable("STAFF_TOKEN") ?? DefaultStaffToken;
+    /* The staff token comes from the environment only; without it, the warehouse list is closed to everyone. */
+    private static readonly string? StaffToken = Environment.GetEnvironmentVariable("STAFF_TOKEN");
 
     public static object Present(Order order)
     {
@@ -33,8 +32,9 @@ public static class OrderHandlers
     public static Response GetOrder(Request req, int id)
     {
         var customer = CurrentCustomer(req);
+        if (customer == null) return new Response(401, new { error = "sign in first" });
         var order = FindOrder(id);
-        if (order.CustomerId != customer.Id) return NotFound("order");
+        if (order == null || order.CustomerId != customer.Id) return NotFound("order");
         return new Response(200, Present(order));
     }
 
@@ -47,20 +47,25 @@ public static class OrderHandlers
         if (order == null || order.CustomerId != customer.Id) return NotFound("order");
         if (order.Status != "open") return new Response(409, new { error = $"the order is already {order.Status}" });
 
-        var body = req.Body;
-        JsonElement sku = default, qty = default;
-        if (body.ValueKind == JsonValueKind.Object)
-        {
-            body.TryGetProperty("sku", out sku);
-            body.TryGetProperty("qty", out qty);
-        }
-        if (sku.ValueKind != JsonValueKind.String || !ProductExists(sku.GetString())) return BadRequest("unknown product");
-        var n = qty.ValueKind == JsonValueKind.Number ? qty.GetDouble() : double.NaN;
-        if (!double.IsInteger(n) || n < 1 || n > 99) return BadRequest("qty must be between 1 and 99");
+        var (sku, qty) = ReadItem(req.Body);
+        if (sku == null || !ProductExists(sku)) return BadRequest("unknown product");
+        if (!double.IsInteger(qty) || qty < 1 || qty > 99) return BadRequest("qty must be between 1 and 99");
 
-        AddItem(order.Id, sku.GetString(), (int)n);
-        return new Response(200, Present(FindOrder(id)));
+        AddItem(order.Id, sku, (int)qty);
+        return ShowOrder(id);
     }
+
+    /* The { sku, qty } of a request body: sku is null unless it is a string, qty is NaN unless it is a number. */
+    private static (string? Sku, double Qty) ReadItem(JsonElement body)
+    {
+        if (body.ValueKind != JsonValueKind.Object) return (null, double.NaN);
+        var sku = body.TryGetProperty("sku", out var s) && s.ValueKind == JsonValueKind.String ? s.GetString() : null;
+        var qty = body.TryGetProperty("qty", out var q) && q.ValueKind == JsonValueKind.Number ? q.GetDouble() : double.NaN;
+        return (sku, qty);
+    }
+
+    private static Response ShowOrder(int id) =>
+        FindOrder(id) is { } order ? new Response(200, Present(order)) : NotFound("order");
 
     /* DELETE /orders/:id/items/:sku */
     public static Response RemoveItemFromOrder(Request req, int id, string sku)
@@ -72,7 +77,7 @@ public static class OrderHandlers
         if (order.Status != "open") return new Response(409, new { error = $"the order is already {order.Status}" });
 
         RemoveItem(order.Id, sku);
-        return new Response(200, Present(FindOrder(id)));
+        return ShowOrder(id);
     }
 
     /* GET /orders/:id/receipt – a plain-text receipt to print */
@@ -87,8 +92,8 @@ public static class OrderHandlers
     /* GET /warehouse/orders?status=paid – the packing team's list, grouped by customer */
     public static Response ListOrdersForWarehouse(Request req, string status)
     {
-        if (req.Headers["X-Staff-Token"] != StaffToken) return new Response(403, new { error = "staff only" });
-        var orders = FindOrdersByStatus(status).AsQueryable().OrderBy("CustomerId, Id").ToList();
+        if (StaffToken == null || req.Headers["X-Staff-Token"] != StaffToken) return new Response(403, new { error = "staff only" });
+        var orders = FindOrdersByStatus(status).OrderBy(o => o.CustomerId).ThenBy(o => o.Id).ToList();
         return new Response(200, orders.Select(Present).ToList());
     }
 }

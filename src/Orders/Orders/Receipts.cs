@@ -5,14 +5,15 @@ using static Orders.Orders.Pricing;
 
 namespace Orders.Orders;
 
-public static class Receipts
+internal static class Receipts
 {
     /* A plain-text receipt: who ordered what, and what it costs. */
-    public static string BuildReceipt(int orderId)
+    public static string? BuildReceipt(int orderId)
     {
         var order = FindOrder(orderId);
         if (order == null) return null;
         var customer = FindCustomer(order.CustomerId);
+        if (customer == null) return null;
         var totals = PriceOrder(order);
         string[] lines =
         [

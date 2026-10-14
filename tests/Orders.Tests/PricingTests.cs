@@ -4,8 +4,8 @@ namespace Orders.Tests;
 
 public class PricingTests
 {
-    static Order Order(params (string Sku, int Qty, int UnitPrice)[] items) =>
-        new(1, 1, "open", null, items.Select(i => new OrderItem(i.Sku, i.Qty, i.UnitPrice)).ToList());
+    private static Order Order(params (string Sku, int Qty, int UnitPrice)[] items) =>
+        new(1, 1, "open", null, [.. items.Select(i => new OrderItem(i.Sku, i.Qty, i.UnitPrice))]);
 
     [Fact]
     public void AddsUpTheItems()

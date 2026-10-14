@@ -2,11 +2,11 @@ using System.Text.Json;
 
 namespace Orders;
 
-public record Request(string Method, string Path, IHeaderDictionary Headers, JsonElement Body);
+internal record Request(string Method, string Path, IHeaderDictionary Headers, JsonElement Body);
 
-public record Response(int Status, object Body);
+internal record Response(int Status, object Body);
 
-public static class Http
+internal static class Http
 {
     public static async Task<Request> ReadRequest(HttpRequest incoming)
     {
@@ -17,7 +17,7 @@ public static class Http
     {
         using var reader = new StreamReader(incoming.Body);
         var raw = await reader.ReadToEndAsync();
-        return JsonSerializer.Deserialize<JsonElement>(raw == "" ? "{}" : raw);
+        return JsonSerializer.Deserialize<JsonElement>(raw.Length == 0 ? "{}" : raw);
     }
 
     public static Response NotFound(string what) => new(404, new { error = $"{what} not found" });

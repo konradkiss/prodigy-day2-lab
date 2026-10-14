@@ -3,7 +3,7 @@ namespace Orders;
 /*
  * Money is always a whole number of cents, held in an int. See docs/money.md.
  */
-public static class Money
+internal static class Money
 {
     /// <summary><paramref name="pct"/> percent of an amount, rounded half up to the cent.</summary>
     public static int PercentOf(int amount, int pct)

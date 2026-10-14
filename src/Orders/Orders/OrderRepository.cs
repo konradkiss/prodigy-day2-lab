@@ -2,13 +2,13 @@ using Microsoft.Data.Sqlite;
 
 namespace Orders.Orders;
 
-public record OrderItem(string Sku, int Qty, int UnitPrice);
+internal record OrderItem(string Sku, int Qty, int UnitPrice);
 
-public record Order(int Id, int CustomerId, string Status, string DiscountCode, List<OrderItem> Items);
+internal record Order(int Id, int CustomerId, string Status, string? DiscountCode, List<OrderItem> Items);
 
-public static class OrderRepository
+internal static class OrderRepository
 {
-    public static Order FindOrder(int id)
+    public static Order? FindOrder(int id)
     {
         using var cmd = Db.Connection.CreateCommand();
         cmd.CommandText = "SELECT id, customer_id, status, discount_code FROM orders WHERE id = $id";
@@ -21,7 +21,8 @@ public static class OrderRepository
     public static List<Order> FindOrdersByStatus(string status)
     {
         using var cmd = Db.Connection.CreateCommand();
-        cmd.CommandText = $"SELECT id, customer_id, status, discount_code FROM orders WHERE status = '{status}' ORDER BY id";
+        cmd.CommandText = "SELECT id, customer_id, status, discount_code FROM orders WHERE status = $status ORDER BY id";
+        cmd.Parameters.AddWithValue("$status", status);
         using var reader = cmd.ExecuteReader();
         var orders = new List<Order>();
         while (reader.Read()) orders.Add(ToOrder(reader));
@@ -58,7 +59,7 @@ public static class OrderRepository
         return cmd.ExecuteScalar() != null;
     }
 
-    static Order ToOrder(SqliteDataReader row)
+    private static Order ToOrder(SqliteDataReader row)
     {
         using var cmd = Db.Connection.CreateCommand();
         cmd.CommandText = """

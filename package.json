@@ -8,6 +8,7 @@
     "node": ">=22.18"
   },
   "scripts": {
+    "check": "node scripts/check.mjs",
     "start": "dotnet run --project src/Orders",
     "test": "dotnet test",
     "stryker": "dotnet tool restore && dotnet stryker",
@@ -20,6 +21,8 @@
     "lock-rules": "node scripts/lab.mjs lock-rules"
   },
   "devDependencies": {
-    "@ast-grep/cli": "0.45.3"
+    "@ast-grep/cli": "0.45.3",
+    "@secretlint/secretlint-rule-preset-recommend": "13.0.7",
+    "secretlint": "13.0.7"
   }
 }

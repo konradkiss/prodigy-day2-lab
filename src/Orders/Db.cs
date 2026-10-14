@@ -3,7 +3,7 @@ using Microsoft.Data.Sqlite;
 namespace Orders;
 
 /* One in-memory database per process: every start begins from the same seed data. */
-public static class Db
+internal static class Db
 {
     public static readonly SqliteConnection Connection = Open();
 
@@ -12,7 +12,7 @@ public static class Db
         Seed();
     }
 
-    static SqliteConnection Open()
+    private static SqliteConnection Open()
     {
         var connection = new SqliteConnection("Data Source=:memory:");
         connection.Open();

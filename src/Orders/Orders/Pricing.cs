@@ -2,9 +2,9 @@ using static Orders.Money;
 
 namespace Orders.Orders;
 
-public record Totals(int Subtotal, int BulkDiscount, int Shipping, int Total);
+internal record Totals(int Subtotal, int BulkDiscount, int Shipping, int Total);
 
-public static class Pricing
+internal static class Pricing
 {
     public const int FreeShippingFrom = 5000;
     public const int Shipping = 490;
