@@ -1,8 +1,8 @@
 # The guardrail prompt
 
-The prompt that built this stage, verbatim. This is what the agent ran on top of 3-guidance to produce
+The prompt behind this stage, verbatim. This is what the agent ran on top of 3-guidance to produce
 Directory.Build.props, .editorconfig, CodeMetricsConfig.txt, the secret scan, scripts/check.mjs and the four Claude
-Code hooks. Homework: run it on a repository of yours.
+Code hooks. After the session you can try it on a repository of your own.
 
 ```text
 Set up guardrails in this repo so that every change you make is checked automatically and you see the errors immediately.

@@ -33,7 +33,7 @@ check('coding agent (claude or codex)', () => {
   throw new Error('neither claude nor codex on PATH');
 });
 
-/* The referee comes from agentcode.page: a blocked site or a proxy shows up here, not in the middle of the session. */
+/* The referee comes from agentcode.page: a blocked site or a proxy shows up here, before the session. */
 const referee = await ensureReferee();
 if (!referee.ok) checks.push([`referee (${REFEREE_URL})`, false, referee.why]);
 else {

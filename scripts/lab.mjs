@@ -87,10 +87,7 @@ function stage(name) {
   if (existsSync('docs/STAGE.md')) console.log(`\n${readFileSync('docs/STAGE.md', 'utf8')}`);
 }
 
-/*
- * The referee: this script builds the service, starts it on a free port with fresh data, runs the referee against it,
- * and stops it again, also on Windows (taskkill), so no service is left running between rounds.
- */
+/* Scores a service started just for this run and stopped afterwards (taskkill on Windows), so none is left running. */
 async function referee() {
   const got = await ensureReferee();
   if (!got.ok) { console.error(got.why); process.exit(1); }
@@ -152,10 +149,8 @@ function restore() {
 }
 
 /*
- * After the rules exercise: the agent wrote rules/, rule-tests/ and sgconfig.yml, but it cannot add them to
- * scripts/check.mjs (the hooks protect it), so the human runs this. It adds exactly the lines of the 4-rules stage:
- * the rule tests and a scan in the full check, a scan of the edited .cs file in file mode. Then it locks the rules
- * like lock-rules. Idempotent: on a stage where the rules are wired it says so and changes nothing in the check.
+ * After the rules exercise: adds the 4-rules stage's lines (WIRING) to scripts/check.mjs, which the hooks keep the
+ * agent from editing, then locks the rules. Where the rules are already wired it changes nothing in the check.
  */
 const CHECK = 'scripts/check.mjs';
 const AST_GREP_FUNCTION = `/* The repository's own ast-grep rules (rules/, sgconfig.yml): first their tests, then a scan of the project. */
