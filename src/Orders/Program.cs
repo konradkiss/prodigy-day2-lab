@@ -22,6 +22,8 @@ app.MapPost("/orders/{id:int}/items", async (HttpRequest incoming, int id) =>
     Send(OrderHandlers.AddItemToOrder(await ReadRequest(incoming), id)));
 app.MapDelete("/orders/{id:int}/items/{sku}", async (HttpRequest incoming, int id, string sku) =>
     Send(OrderHandlers.RemoveItemFromOrder(await ReadRequest(incoming), id, sku)));
+app.MapPost("/orders/{id:int}/discount", async (HttpRequest incoming, int id) =>
+    Send(OrderHandlers.ApplyDiscount(await ReadRequest(incoming), id)));
 app.MapGet("/orders/{id:int}/receipt", async (HttpRequest incoming, int id) =>
     Send(OrderHandlers.GetReceipt(await ReadRequest(incoming), id)));
 app.MapGet("/warehouse/orders", async (HttpRequest incoming) =>

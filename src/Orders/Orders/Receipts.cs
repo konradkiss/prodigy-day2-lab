@@ -18,6 +18,7 @@ public static class Receipts
         [
             $"Order {order.Id} · {customer.Name} <{customer.Email}>",
             .. order.Items.Select(i => $"{i.Qty} × {i.Sku}  {FormatCents(i.UnitPrice * i.Qty)}"),
+            .. (totals.CodeDiscount > 0 ? new[] { $"Code {order.DiscountCode}  -{FormatCents(totals.CodeDiscount)}" } : []),
             $"Shipping  {FormatCents(totals.Shipping)}",
             $"Total  {FormatCents(totals.Total)}",
         ];

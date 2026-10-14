@@ -1,10 +1,13 @@
+using System.Globalization;
 using Microsoft.Data.Sqlite;
 
 namespace Orders.Orders;
 
 public record OrderItem(string Sku, int Qty, int UnitPrice);
 
-public record Order(int Id, int CustomerId, string Status, string DiscountCode, List<OrderItem> Items);
+public record Discount(string Code, int Percent, int MinOrderCents, DateOnly ExpiresOn);
+
+public record Order(int Id, int CustomerId, string Status, string DiscountCode, List<OrderItem> Items, Discount Discount = null);
 
 public static class OrderRepository
 {
@@ -50,6 +53,27 @@ public static class OrderRepository
         cmd.ExecuteNonQuery();
     }
 
+    /* Codes are stored in upper case; customers may type them in any case. */
+    public static Discount FindDiscount(string code)
+    {
+        using var cmd = Db.Connection.CreateCommand();
+        cmd.CommandText = "SELECT code, percent, min_order_cents, expires_on FROM discount_codes WHERE code = $code";
+        cmd.Parameters.AddWithValue("$code", code.Trim().ToUpperInvariant());
+        using var reader = cmd.ExecuteReader();
+        if (!reader.Read()) return null;
+        return new Discount(reader.GetString(0), reader.GetInt32(1), reader.GetInt32(2), DateOnly.ParseExact(reader.GetString(3), "yyyy-MM-dd", CultureInfo.InvariantCulture));
+    }
+
+    /* An order holds at most one code: applying a new one replaces the previous one. */
+    public static void SetDiscountCode(int orderId, string code)
+    {
+        using var cmd = Db.Connection.CreateCommand();
+        cmd.CommandText = "UPDATE orders SET discount_code = $code WHERE id = $orderId";
+        cmd.Parameters.AddWithValue("$orderId", orderId);
+        cmd.Parameters.AddWithValue("$code", code);
+        cmd.ExecuteNonQuery();
+    }
+
     public static bool ProductExists(string sku)
     {
         using var cmd = Db.Connection.CreateCommand();
@@ -70,11 +94,13 @@ public static class OrderRepository
         var items = new List<OrderItem>();
         while (reader.Read()) items.Add(new OrderItem(reader.GetString(0), reader.GetInt32(1), reader.GetInt32(2)));
 
+        var code = row.IsDBNull(3) ? null : row.GetString(3);
         return new Order(
             row.GetInt32(0),
             row.GetInt32(1),
             row.GetString(2),
-            row.IsDBNull(3) ? null : row.GetString(3),
-            items);
+            code,
+            items,
+            code == null ? null : FindDiscount(code));
     }
 }

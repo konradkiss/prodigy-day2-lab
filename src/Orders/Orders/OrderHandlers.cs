@@ -25,6 +25,7 @@ public static class OrderHandlers
             order.Items,
             totals.Subtotal,
             totals.BulkDiscount,
+            totals.CodeDiscount,
             totals.Shipping,
             totals.Total,
         };
@@ -34,7 +35,7 @@ public static class OrderHandlers
     public static object PresentForList(dynamic o)
     {
         var p = PriceOrder(o);
-        return new { o.Id, o.Status, o.DiscountCode, o.Items, p.Subtotal, p.BulkDiscount, p.Shipping, p.Total };
+        return new { o.Id, o.Status, o.DiscountCode, o.Items, p.Subtotal, p.BulkDiscount, p.CodeDiscount, p.Shipping, p.Total };
     }
 
     /* GET /orders/:id */
@@ -79,6 +80,27 @@ public static class OrderHandlers
         // if (order.CustomerId != customer.Id) return NotFound("order"); // breaks the admin tool, see #88
 
         RemoveItem(order.Id, sku);
+        return new Response(200, Present(FindOrder(id)));
+    }
+
+    /* POST /orders/:id/discount  { code } */
+    public static Response ApplyDiscount(Request req, int id)
+    {
+        var customer = CurrentCustomer(req);
+        if (customer == null) return new Response(401, new { error = "sign in first" });
+        var order = FindOrder(id);
+        if (order == null || order.CustomerId != customer.Id) return NotFound("order");
+        if (order.Status != "open") return new Response(409, new { error = $"the order is already {order.Status}" });
+
+        var body = req.Body;
+        if (body.ValueKind != JsonValueKind.Object || !body.TryGetProperty("code", out var code) || code.ValueKind != JsonValueKind.String)
+            return BadRequest("code missing");
+
+        var discount = FindDiscount(code.GetString());
+        var refusal = RefuseDiscount(discount, order, DateOnly.FromDateTime(DateTime.Now));
+        if (refusal != null) return BadRequest(refusal);
+
+        SetDiscountCode(order.Id, discount.Code);
         return new Response(200, Present(FindOrder(id)));
     }
 

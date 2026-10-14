@@ -47,9 +47,14 @@ function render() {
     html += '<input id="qty" value="1" size="3"> <button onclick="addIt()">add</button></div>';
   }
 
+  if (order.status == 'open') {
+    html += '<div class="box">Discount code: <input id="code" size="12"> <button onclick="applyCode()">apply</button></div>';
+  }
+
   html += '<div class="box"><table>';
   html += '<tr><td>Subtotal</td><td class="r">' + money(order.subtotal) + '</td></tr>';
   if (order.bulkDiscount > 0) html += '<tr><td>Bulk discount</td><td class="r">-' + money(order.bulkDiscount) + '</td></tr>';
+  if (order.discountCode) html += '<tr><td>Code ' + order.discountCode + '</td><td class="r">-' + money(order.codeDiscount) + '</td></tr>';
   html += '<tr><td>Shipping</td><td class="r">' + money(order.shipping) + '</td></tr>';
   html += '<tr><td><b>Total</b></td><td class="r"><b>' + money(order.total) + '</b></td></tr>';
   html += '</table></div>';
@@ -77,6 +82,18 @@ function addIt() {
       r.json().then(function (j) { document.getElementById('msg').innerHTML = '<p class="err">' + (j.error || j.message || 'error') + '</p>'; });
     } else {
       document.getElementById('msg').innerHTML = '<p class="ok">added</p>';
+    }
+    fetch('/orders/' + order.id, { headers: { 'X-Customer-Id': custId } }).then(function (r2) { return r2.json(); }).then(function (j) { order = j; render(); });
+  });
+}
+
+function applyCode() {
+  var code = document.getElementById('code').value;
+  fetch('/orders/' + order.id + '/discount', { method: 'POST', headers: { 'X-Customer-Id': custId, 'Content-Type': 'application/json' }, body: JSON.stringify({ code: code }) }).then(function (r) {
+    if (r.status != 200) {
+      r.json().then(function (j) { document.getElementById('msg').innerHTML = '<p class="err">' + (j.error || 'error') + '</p>'; });
+    } else {
+      document.getElementById('msg').innerHTML = '<p class="ok">code applied</p>';
     }
     fetch('/orders/' + order.id, { headers: { 'X-Customer-Id': custId } }).then(function (r2) { return r2.json(); }).then(function (j) { order = j; render(); });
   });
