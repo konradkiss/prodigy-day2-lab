@@ -4,3 +4,7 @@ TestResults/
 .vs/
 *.user
 .DS_Store
+node_modules/
+.lab/
+.evidence/
+StrykerOutput/

@@ -1,0 +1,24 @@
+{
+  "stryker-config": {
+    "solution": "Orders.sln",
+    "project": "Orders.csproj",
+    "test-projects": [
+      "tests/Orders.Tests/Orders.Tests.csproj"
+    ],
+    "mutate": [
+      "**/*.cs",
+      "!**/Program.cs"
+    ],
+    "reporters": [
+      "progress",
+      "cleartext",
+      "html",
+      "json"
+    ],
+    "thresholds": {
+      "high": 80,
+      "low": 60,
+      "break": 0
+    }
+  }
+}
