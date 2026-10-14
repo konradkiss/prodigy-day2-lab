@@ -108,9 +108,9 @@ async function referee() {
     process.exit(1);
   }
   const stop = () => stopService(service.child);
-  process.once('SIGINT', () => { stop(); process.exit(130); });
+  process.once('SIGINT', async () => { await stop(); process.exit(130); });
   const status = run('node', [REFEREE, service.base, ...process.argv.slice(3)]);
-  stop();
+  await stop();
   process.exit(status);
 }
 
