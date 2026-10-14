@@ -1,18 +1,14 @@
-using static Orders.Customers.CustomerRepository;
+using Orders.Customers;
 using static Orders.Money;
-using static Orders.Orders.OrderRepository;
 using static Orders.Orders.Pricing;
 
 namespace Orders.Orders;
 
 public static class Receipts
 {
-    /* A plain-text receipt: who ordered what, and what it costs. */
-    public static string BuildReceipt(int orderId)
+    /* A plain-text receipt: who ordered what, and what it costs. The caller has already loaded both. */
+    public static string BuildReceipt(Order order, Customer customer)
     {
-        var order = FindOrder(orderId);
-        if (order == null) return null;
-        var customer = FindCustomer(order.CustomerId);
         var totals = PriceOrder(order);
         string[] lines =
         [

@@ -4,24 +4,35 @@ namespace Orders.Orders;
 
 public record OrderItem(string Sku, int Qty, int UnitPrice);
 
-public record Order(int Id, int CustomerId, string Status, string DiscountCode, List<OrderItem> Items);
+public record Order(int Id, int CustomerId, string Status, string? DiscountCode, List<OrderItem> Items);
 
+/* The states an order moves through, stored and shown as these words. */
+public static class OrderStatus
+{
+    public const string Open = "open";
+    public const string Paid = "paid";
+    public const string Shipped = "shipped";
+
+    public static bool IsKnown(string? value) => value is Open or Paid or Shipped;
+}
+
+/* Every query takes its values as parameters; SQL is never built from strings. */
 public static class OrderRepository
 {
-    public static Order FindOrder(int id)
+    public static Order? FindOrder(int id)
     {
         using var cmd = Db.Connection.CreateCommand();
         cmd.CommandText = "SELECT id, customer_id, status, discount_code FROM orders WHERE id = $id";
         cmd.Parameters.AddWithValue("$id", id);
         using var reader = cmd.ExecuteReader();
-        if (!reader.Read()) return null;
-        return ToOrder(reader);
+        return reader.Read() ? ToOrder(reader) : null;
     }
 
     public static List<Order> FindOrdersByStatus(string status)
     {
         using var cmd = Db.Connection.CreateCommand();
-        cmd.CommandText = $"SELECT id, customer_id, status, discount_code FROM orders WHERE status = '{status}' ORDER BY id";
+        cmd.CommandText = "SELECT id, customer_id, status, discount_code FROM orders WHERE status = $status ORDER BY id";
+        cmd.Parameters.AddWithValue("$status", status);
         using var reader = cmd.ExecuteReader();
         var orders = new List<Order>();
         while (reader.Read()) orders.Add(ToOrder(reader));
